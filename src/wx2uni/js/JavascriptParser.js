@@ -24,7 +24,7 @@ class JavascriptParser {
             .replace(/,\s*Page\(\s*\{/g, '; Page({');
 
         if (!isAppFile) {
-            newCode = newCode.replace(/\.globalData\./img, '.');
+            // newCode = newCode.replace(/\.globalData\./img, '.');
         }
         return newCode;
     }

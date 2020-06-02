@@ -82,9 +82,9 @@ function globalDataHandle2 (path) {
              * 二、将变替换一下即可，改动较小，但可能会遇到在vue加载前就加载了组件的情况。。。
              */
             //方案一：
-            var oldIdName = id.node.name;
-            path.parentPath.scope.rename(id.node.name, id.node.name + ".globalData");
-            path.node.id.name = oldIdName;
+            // var oldIdName = id.node.name;
+            // path.parentPath.scope.rename(id.node.name, id.node.name + ".globalData");
+            // path.node.id.name = oldIdName;
 
             //方案二：
             // let memExp = t.memberExpression(t.callExpression(t.identifier("getApp"), []), t.identifier("globalData"));
