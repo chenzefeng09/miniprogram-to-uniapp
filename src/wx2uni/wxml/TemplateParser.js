@@ -85,6 +85,12 @@ class TemplateParser {
             if (item.type === 'text') {
                 str += item.data;
             } else if (item.type === 'tag') {
+                switch (item.name) {
+                    //一些标签需要重命名
+                    case 'navigation-bar':
+                        item.name = 'nav-bar';
+                        break;
+                }
                 str += '<' + item.name;
                 if (item.attribs) {
                     Object.keys(item.attribs).forEach(attr => {
