@@ -2,9 +2,19 @@ const path = require('path');
 const fs = require('fs-extra');
 const clone = require('clone');
 const utils = require('../../utils/utils.js');
+const astUtil = require('../../utils/astUtil.js')
+const parseExpression = astUtil.parseExpression;
 const pathUtil = require('../../utils/pathUtil.js');
 const objectStringToObject = require('object-string-to-object');
 // const paramsHandle = require('../paramsHandle');
+
+//处理事件绑定时，传参的问题
+const t = require("@babel/types");
+const generate = require("@babel/generator").default;
+const traverse = require("@babel/traverse").default;
+const template = require("@babel/template").default;
+const parseJs = require('@babel/parser').parse;
+
 
 /**
  * 去掉属性的值的双括号，然后将值里面的双引号改为单引号
@@ -12,6 +22,49 @@ const objectStringToObject = require('object-string-to-object');
  */
 function repairAttr (attr) {
     return attr.replace(/{{ ?(.*?) ?}}/, '$1').replace(/\"/g, "'");
+}
+
+/**
+ * 去掉属性的值的双括号，然后将值里面的双引号改为单引号
+ * 然后，处理事件绑定时，小程序可能通过表达式返回一个字符串的问题，将字符串替换为表达式，因为vue无法识别字符串形式的。
+ * @param {*} attr
+ */
+function repairAttrForEventBind (attr,dataset) {
+    let attrValue = repairAttr(attr);
+    let ast = parseJs(attrValue, {});
+    const pattern = /\W/
+    if (!pattern.test(attrValue)){
+        //认为是一个简单的字符串，最简单的组件
+        attrValue += ("($event,{"+dataset+"})")
+        // console.log(attrValue)
+        return attrValue
+    }
+    else {
+        traverse(ast, {
+            ExpressionStatement(path) {
+                //处理事件绑定时，小程序可能通过表达式返回一个字符串的问题，将字符串替换为表达式，因为vue无法识别字符串形式的。
+                if (t.isConditionalExpression(path.node.expression)) {
+                    if (t.isStringLiteral(path.node.expression.consequent)) {
+                        let funcName = path.node.expression.consequent.value;
+                        if (path.node.expression.consequent.value != '') {
+                            let codeFrame = funcName+'($event,'+'{'+dataset+'})'
+                            let codeFrameAst = parseExpression(codeFrame);
+                            path.get("expression").get("consequent").replaceWith(codeFrameAst)
+                        }
+                    }
+                    if (t.isStringLiteral(path.node.expression.alternate)) {
+                        let funcName = path.node.expression.alternate.value;
+                        if (path.node.expression.alternate.value != '') {
+                            let codeFrame = funcName+'($event,'+'{'+dataset+'})'
+                            let codeFrameAst = parseExpression(codeFrame);
+                            path.get("expression").get("alternate").replaceWith(codeFrameAst)
+                        }
+                    }
+                }
+            }
+        })
+        return generate(ast).code.replace(';', '');
+    }
 }
 
 //html标签替换规则，可以添加更多
@@ -55,7 +108,7 @@ const attrConverterConfigUni = {
     bindtap: {
         key: '@tap',
         value: str => {
-            return repairAttr(str);
+            return repairAttrForEventBind(str);
         }
     },
     //参考：https://www.cnblogs.com/baohanblog/p/12457490.html
@@ -79,8 +132,8 @@ const attrConverterConfigUni = {
     },
     catchtap: {
         key: '@tap.stop',
-        value: str => {
-            return repairAttr(str);
+        value: (str,dataset) => {
+            return repairAttrForEventBind(str,dataset);
         }
     },
     'capture-catch:tap': {
@@ -92,7 +145,7 @@ const attrConverterConfigUni = {
     'catch:tap': {
         key: '@tap.stop',
         value: str => {
-            return repairAttr(str);
+            return repairAttrForEventBind(str);
         }
     },
     'data-ref': {
@@ -824,6 +877,24 @@ const templateConverter = async function (
             }
 
             const oldNode = clone(node);
+            let mock_dataset = {}
+            let str1 = '';
+            for (let k in node.attribs) {
+                if (k.startsWith('data-')){
+                    if (node.attribs[k].indexOf('{{') != -1){
+                        str1+=(k.substr(5)+':'+node.attribs[k].replace(/{/g,'').replace(/}/g,''))
+                        str1+=','
+                        // mock_dataset[k.substr(5)]= node.attribs[k].replace(/{/g,'').replace(/}/g,'')
+                    }
+                    else {
+                        str1+=(k.substr(5)+':"'+node.attribs[k]+'"')
+                        str1+=','
+                    }
+                    delete node.attribs[k]
+                }
+            }
+            str1 = str1.substr(0,str1.length - 1)
+            // console.log(str1)
             for (let k in node.attribs) {
                 let target = attrConverterConfigUni[k];
                 if (target) {
@@ -838,10 +909,10 @@ const templateConverter = async function (
                         key = hasBind ? ':url' : this.key;
                     }
                     attrs[key] = target['value']
-                        ? target['value'](node.attribs[k])
+                        ? target['value'](node.attribs[k],str1)
                         : node.attribs[k];
                 } else {
-                    //其他属性处理
+                    //
                     otherTagHandle(node, attrs, k);
                 }
             }

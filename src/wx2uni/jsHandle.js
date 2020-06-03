@@ -14,6 +14,7 @@ const clone = require("clone");
 const utils = require("../utils/utils.js");
 const pathUtil = require("../utils/pathUtil.js");
 const babelUtil = require("../utils/babelUtil.js");
+const parseExpression = require('../utils/astUtil.js').parseExpression
 
 const appConverter = require("./js/appConverter");
 const pageConverter = require("./js/pageConverter");
@@ -648,6 +649,43 @@ const componentTemplateBuilder = function (
                 path.remove();
                 // 这里不能停止，否则后面的this.data.xxx不会被转换 20190918
                 // path.skip();
+            }
+            else if(name == "methods"){
+                //这个traverse的目的是将页面js的methods中，那些通过e.turrentTarget.dataset
+                //方法取值的地方，全部替换为可以兼容h5的写法，也就是通过一个自动加的dataset参数来获取
+                traverse(path.node,{
+                    noScope: true,
+                    ObjectMethod (methodPath){
+                        if(methodPath.parentPath.parent == path.node){
+                            traverse(methodPath.node,{
+                                noScope:true,
+                                VariableDeclarator(dPath){
+                                    let code = generate(dPath.node.init).code
+                                    if (code.indexOf('e.currentTarget.dataset') != -1) {
+                                        methodPath.node.params.push(t.identifier('dataset'));
+                                        code = code.replace(/e.currentTarget.dataset/g,'dataset')
+                                        dPath.get('init').replaceWithSourceString(code)
+                                    }
+                                }
+                            })
+                        }
+                    },
+                    ObjectProperty (propertyPath){
+                        if(propertyPath.parentPath.parent == path.node && t.isFunctionExpression(propertyPath.node.value)){
+                            traverse(propertyPath.node,{
+                                noScope:true,
+                                VariableDeclarator(dPath){
+                                    let code = generate(dPath.node.init).code
+                                    if (code.indexOf('e.currentTarget.dataset') != -1) {
+                                        propertyPath.node.value.params.push(t.identifier('dataset'));
+                                        code = code.replace(/e.currentTarget.dataset/g,'dataset')
+                                        dPath.get('init').replaceWithSourceString(code)
+                                    }
+                                }
+                            })
+                        }
+                    }
+                })
             }
         },
         CallExpression (path) {
