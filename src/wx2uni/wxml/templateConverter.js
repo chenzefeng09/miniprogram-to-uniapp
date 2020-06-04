@@ -38,7 +38,9 @@ function repairAttrForEventBind (attr,dataset) {
     const pattern = /\W/
     if (!pattern.test(attrValue)){
         //认为是一个简单的字符串，最简单的组件
-        attrValue += ("($event,{"+dataset+"})")
+        if (dataset) {
+            attrValue += ("($event,{"+dataset+"})")
+        }
         // console.log(attrValue)
         return attrValue
     }
