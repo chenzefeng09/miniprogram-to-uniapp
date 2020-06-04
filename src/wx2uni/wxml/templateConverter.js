@@ -27,7 +27,11 @@ function repairAttr (attr) {
 /**
  * 去掉属性的值的双括号，然后将值里面的双引号改为单引号
  * 然后，处理事件绑定时，小程序可能通过表达式返回一个字符串的问题，将字符串替换为表达式，因为vue无法识别字符串形式的。
- * @param {*} attr
+ *
+ *
+ * @param {*} attr 属性名 如 bindtap
+ * @param {*} dataset  收集到的该标签里的所有data-数据
+ * @returns
  */
 function repairAttrForEventBind (attr,dataset) {
     let attrValue = repairAttr(attr);
@@ -105,48 +109,11 @@ const attrConverterConfigUni = {
             return repairAttr(str);
         }
     },
-    bindtap: {
-        key: '@tap',
-        value: str => {
-            return repairAttrForEventBind(str);
-        }
-    },
-    //参考：https://www.cnblogs.com/baohanblog/p/12457490.html
-    'capture-bind:tap': {
-        key: '@tap',
-        value: str => {
-            return repairAttr(str);
-        }
-    },
-    'bind:tap': {
-        key: '@tap',
-        value: str => {
-            return repairAttr(str);
-        }
-    },
     bindinput: {
         key: '@input'
     },
     bindgetuserinfo: {
         key: '@getuserinfo'
-    },
-    catchtap: {
-        key: '@tap.stop',
-        value: (str,dataset) => {
-            return repairAttrForEventBind(str,dataset);
-        }
-    },
-    'capture-catch:tap': {
-        key: '@tap.stop',
-        value: str => {
-            return repairAttr(str);
-        }
-    },
-    'catch:tap': {
-        key: '@tap.stop',
-        value: str => {
-            return repairAttrForEventBind(str);
-        }
     },
     'data-ref': {
         key: 'ref',
@@ -877,27 +844,44 @@ const templateConverter = async function (
             }
 
             const oldNode = clone(node);
-            let mock_dataset = {}
-            let str1 = '';
+            //收集node属性中，所有的data-信息，用于拼装传参
+            let collect_data_str = '';
             for (let k in node.attribs) {
                 if (k.startsWith('data-')){
                     if (node.attribs[k].indexOf('{{') != -1){
-                        str1+=(k.substr(5)+':'+node.attribs[k].replace(/{/g,'').replace(/}/g,''))
-                        str1+=','
+                        collect_data_str+=(k.substr(5)+':'+node.attribs[k].replace(/{/g,'').replace(/}/g,''))
+                        collect_data_str+=','
                         // mock_dataset[k.substr(5)]= node.attribs[k].replace(/{/g,'').replace(/}/g,'')
                     }
                     else {
-                        str1+=(k.substr(5)+':"'+node.attribs[k]+'"')
-                        str1+=','
+                        collect_data_str+=(k.substr(5)+':"'+node.attribs[k]+'"')
+                        collect_data_str+=','
                     }
                     delete node.attribs[k]
                 }
             }
-            str1 = str1.substr(0,str1.length - 1)
-            // console.log(str1)
+            collect_data_str = collect_data_str.substr(0,collect_data_str.length - 1)
+            // console.log(collect_data_str)
+            let bindEventTest = /(capture-)?(?:bind|catch)[:]?(\w+)/
             for (let k in node.attribs) {
                 let target = attrConverterConfigUni[k];
-                if (target) {
+                if (bindEventTest.test(k)) {
+                    //处理事件绑定
+                    let result = bindEventTest.exec(k)
+                    let shouldStop = false
+                    if (result[1]) {
+                        //表示第一个匹配 (capture-) 获取到了，需要转换后需要加.stop标记
+                        shouldStop = true
+                    }
+                    let key = '@' + result[2];
+                    if (shouldStop) {
+                        key+='.stop'
+                    }
+                    attrs[key] = repairAttrForEventBind(node.attribs[k],collect_data_str)
+                }
+                else if (target) {
+                    //处理一些固定的属性转换规则，如wx:if = > v-if
+
                     //单独判断style的绑定情况
                     let key = target['key'];
                     let value = node.attribs[k];
@@ -909,7 +893,7 @@ const templateConverter = async function (
                         key = hasBind ? ':url' : this.key;
                     }
                     attrs[key] = target['value']
-                        ? target['value'](node.attribs[k],str1)
+                        ? target['value'](node.attribs[k],collect_data_str)
                         : node.attribs[k];
                 } else {
                     //

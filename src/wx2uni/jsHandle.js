@@ -662,8 +662,8 @@ const componentTemplateBuilder = function (
                                 VariableDeclarator(dPath){
                                     let code = generate(dPath.node.init).code
                                     if (code.indexOf('e.currentTarget.dataset') != -1) {
-                                        methodPath.node.params.push(t.identifier('dataset'));
-                                        code = code.replace(/e.currentTarget.dataset/g,'dataset')
+                                        methodPath.node.params.push(t.identifier('datasetCollect'));
+                                        code = code.replace(/e.currentTarget.dataset/g,'datasetCollect')
                                         dPath.get('init').replaceWithSourceString(code)
                                     }
                                 }
@@ -677,8 +677,8 @@ const componentTemplateBuilder = function (
                                 VariableDeclarator(dPath){
                                     let code = generate(dPath.node.init).code
                                     if (code.indexOf('e.currentTarget.dataset') != -1) {
-                                        propertyPath.node.value.params.push(t.identifier('dataset'));
-                                        code = code.replace(/e.currentTarget.dataset/g,'dataset')
+                                        propertyPath.node.value.params.push(t.identifier('datasetCollect'));
+                                        code = code.replace(/e.currentTarget.dataset/g,'datasetCollect')
                                         dPath.get('init').replaceWithSourceString(code)
                                     }
                                 }
