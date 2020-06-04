@@ -35,7 +35,6 @@ function repairAttr (attr) {
  */
 function repairAttrForEventBind (attr,dataset) {
     let attrValue = repairAttr(attr);
-    let ast = parseJs(attrValue, {});
     const pattern = /\W/
     if (!pattern.test(attrValue)){
         //认为是一个简单的字符串，最简单的组件
@@ -44,6 +43,7 @@ function repairAttrForEventBind (attr,dataset) {
         return attrValue
     }
     else {
+        let ast = parseJs(attrValue, {});
         traverse(ast, {
             ExpressionStatement(path) {
                 //处理事件绑定时，小程序可能通过表达式返回一个字符串的问题，将字符串替换为表达式，因为vue无法识别字符串形式的。
@@ -848,17 +848,22 @@ const templateConverter = async function (
             let collect_data_str = '';
             for (let k in node.attribs) {
                 if (k.startsWith('data-')){
-                    if (node.attribs[k].indexOf('{{') != -1){
-                        collect_data_str+=(k.substr(5)+':'+node.attribs[k].replace(/{/g,'').replace(/}/g,''))
-                        collect_data_str+=','
-                        // mock_dataset[k.substr(5)]= node.attribs[k].replace(/{/g,'').replace(/}/g,'')
-                    }
-                    else {
-                        collect_data_str+=(k.substr(5)+':"'+node.attribs[k]+'"')
-                        collect_data_str+=','
-                    }
+                    otherTagHandle(node, attrs, k);
                     delete node.attribs[k]
                 }
+            }
+            // console.log(attrs);
+            
+            for (const k in attrs) {
+                if (k.startsWith('data-')){
+                    collect_data_str+=(k.substr(5)+':\''+attrs[k]+"'")
+                    collect_data_str+=','
+                }
+                if (k.startsWith(':data-')) {
+                    collect_data_str+=(k.substr(6)+':'+attrs[k])
+                    collect_data_str+=','
+                }
+                delete attrs[k]
             }
             collect_data_str = collect_data_str.substr(0,collect_data_str.length - 1)
             // console.log(collect_data_str)
