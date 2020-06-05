@@ -2,7 +2,7 @@
 	"name": "@ymt/miniprogram-to-uniapp",
 	"author": "375890534@qq.com",
 	"bin": {
-		"wtu": "bin/wtu"
+		"wtu2": "bin/wtu"
 	},
 	"bugs": {
 		"url": "https://github.com/zhangdaren/miniprogram-to-uniapp/issues"
@@ -67,5 +67,5 @@
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
-	"version": "1.0.67"
+	"version": "1.0.70"
 }
