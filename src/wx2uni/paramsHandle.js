@@ -142,7 +142,7 @@ function replaceReserverdKeyword (params) {
  * @param {*} isComponent 
  * @param {*} isInitialCode 
  */
-function paramsHandle (params, isComponent, isInitialCode = true, replacePropsMap = {}) {
+function paramsHandle (params, isComponent, isInitialCode = true, replacePropsMap = {},keepSemicolon) {
     let reg_tag = /{{.*?}}/; //注：连续test时，这里不能加/g，因为会被记录上次index位置
     var result = params.trim();
     if (isComponent && result) {
@@ -158,7 +158,9 @@ function paramsHandle (params, isComponent, isInitialCode = true, replacePropsMa
             }
         } else {
             result = parseParams(result, replacePropsMap);
-            result = result.replace(/;/g, "");
+            if (!keepSemicolon) {
+                result = result.replace(/;/g, "");
+            }
         }
     }
     return result;

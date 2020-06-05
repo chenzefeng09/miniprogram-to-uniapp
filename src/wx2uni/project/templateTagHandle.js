@@ -23,7 +23,11 @@ function repalceWxmlParams (ast, replacePropsMap = {}, fileKey) {
             let oldValue = node.attribs[k];
             if (/^(v-)|^:/.test(k)) {
                 //判断一下key  v-开头和:开头的才放
-                let newValue = paramsHandle(oldValue, true, false, replacePropsMap);
+                let keepSemicolon = false
+                if (k.startsWith(':style')) {
+                    keepSemicolon = true
+                }
+                let newValue = paramsHandle(oldValue, true, false, replacePropsMap,keepSemicolon);
                 node.attribs[k] = newValue;
             }
         }
