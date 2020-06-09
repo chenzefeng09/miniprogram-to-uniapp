@@ -4,6 +4,7 @@ const utils = require('../../utils/utils.js');
 const TemplateParser = require('../wxml/TemplateParser');
 const paramsHandle = require('../paramsHandle');
 const pathUtil = require('../../utils/pathUtil.js');
+var cloneDeep = require('lodash/cloneDeep');
 
 //初始化一个解析器
 const templateParser = new TemplateParser();
@@ -27,6 +28,16 @@ function repalceWxmlParams (ast, replacePropsMap = {}, fileKey) {
                 if (k.startsWith(':style')) {
                     keepSemicolon = true
                 }
+                
+                for (const key in replacePropsMap) {
+                    if (replacePropsMap.hasOwnProperty(key) && (('v-'+key) === k || (':'+key) === k)) {
+                        const element = replacePropsMap[key];
+                        if (element != undefined) {
+                            oldValue = element;
+                            break;
+                        }
+                    }
+                }
                 let newValue = paramsHandle(oldValue, true, false, replacePropsMap,keepSemicolon);
                 node.attribs[k] = newValue;
             }
@@ -35,7 +46,18 @@ function repalceWxmlParams (ast, replacePropsMap = {}, fileKey) {
         if (node.type === 'text') {
             if (node.data) {
                 let text = node.data.replace(/{{(.*?)}}/g, function (match, $1) {
-                    let result = paramsHandle($1, true, false, replacePropsMap);
+                    // console.log($1);
+                    let oldValue = $1;
+                    for (const key in replacePropsMap) {
+                        if (replacePropsMap.hasOwnProperty(key) && key === $1) {
+                            const element = replacePropsMap[key];
+                            if (element != undefined) {
+                                oldValue = element;
+                                break;
+                            }
+                        }
+                    }
+                    let result = paramsHandle(oldValue, true, false, replacePropsMap);
                     return "{{" + result + "}}";
                 })
                 node.data = text;
@@ -69,7 +91,7 @@ function replaceTagByTemplate (tagInfo, templateList, templateName, attr = "") {
     var item = templateList[name];
     if (item) {
         //先把之前的ast取出备用
-        let ast = item.ast;
+        let ast = cloneDeep(item.ast);
         let oldAst = item.oldAst;
         let attrs = templateTag.attribs;
         let templateFileKey = item.curFileKey;
@@ -81,10 +103,10 @@ function replaceTagByTemplate (tagInfo, templateList, templateName, attr = "") {
                 attrsStr += " " + key + "=\"" + value + "\"";
             }
         }
-
+        
         //开始替换
         repalceWxmlParams(ast, replacePropsMap, name);
-
+        
         let templateContent = templateParser.astToString(ast);
         templateWxml = "<block" + attrsStr + ">" + templateContent + "</block>";
 

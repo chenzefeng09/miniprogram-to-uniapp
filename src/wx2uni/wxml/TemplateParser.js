@@ -82,6 +82,9 @@ class TemplateParser {
     astToString (ast) {
         let str = '';
         ast.forEach(item => {
+            if (!item) {
+                continue 
+            }
             if (item.type === 'text') {
                 str += item.data;
             } else if (item.type === 'tag') {
