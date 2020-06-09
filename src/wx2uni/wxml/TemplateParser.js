@@ -83,7 +83,7 @@ class TemplateParser {
         let str = '';
         ast.forEach(item => {
             if (!item) {
-                continue 
+                return  
             }
             if (item.type === 'text') {
                 str += item.data;
