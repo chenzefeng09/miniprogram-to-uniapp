@@ -394,6 +394,15 @@ function parseTemplateAttrParams (attr) {
     let str = attr.replace(/{{\s*(.*?)\s*}}/, '$1');
     //先去掉...[]和...{}
     str = str.replace(/\.\.\.{.*?}|\.\.\.\[.*?\],?/g, "");
+
+    //处理模板传参时的对象解构，将解构参数单独收集
+    let deconstructionObjects = []
+    let deconstructionObjectReg = /\.\.\.([\w|\.]*)?/g
+    let array;
+    while (array = deconstructionObjectReg.exec(str)) {
+        deconstructionObjects.push(array[1]);
+    }
+    //收集解构参数后去掉他
     str = str.replace(/\.\.\..*?,/g, "");
     //正则
     let reg1 = /(\w+:\[.*?\]),?/g;  //解析数组
@@ -417,6 +426,8 @@ function parseTemplateAttrParams (attr) {
         let tmpStr = $1 || $2;
         result = { ...result, ...stringToObject(tmpStr) };
     });
+    //解构参数单独放在一个字段里
+    result['wx2uni_transorm_template_deconstruction_params'] = deconstructionObjects
     return result;
 }
 

@@ -24,14 +24,34 @@ const pathUtil = require('../utils/pathUtil.js');
  */
 function replaceField (name, replacePropsMap = {}) {
     if (!name) return "";
-    let reuslt = name;
+    let result = name;
     if (utils.isObject(replacePropsMap)) {
-        reuslt = replacePropsMap[name] || name;
+        result = replacePropsMap[name];
+
+        //处理模板中的解构参数
+        destructParams = replacePropsMap['wx2uni_transorm_template_deconstruction_params'];
+        if (!result && destructParams) {//如果没有从replacePropsMap中找到这个key，就认为这个key是解构出来的
+            result = ''
+            for (let index = 0; index < destructParams.length; index++) {
+                const element = destructParams[index];
+                result +=(element+'.'+name )
+                //当有多个解构参数时，程序无法判断该使用哪个参数，这时使用或语法连接多个解构参数
+                if (index != destructParams.length - 1) {
+                    result += ' || '
+                }
+            }
+            if (destructParams.length > 1) {
+                result = '('+result+')'
+            }
+        }
+        if (!result) {
+            result = name
+        }
     } else {
         //可能会误替换，这里不进行替换 20200515
-        // reuslt = utils.getPropsAlias(name);
+        // result = utils.getPropsAlias(name);
     }
-    return reuslt;
+    return result;
 }
 
 

@@ -15,7 +15,7 @@ const templateParser = new TemplateParser();
  * @param {*} replacePropsMap 
  * @param {*} fileKey 
  */
-function repalceWxmlParams (ast, replacePropsMap = {}, fileKey) {
+function repalceWxmlParams (ast, replacePropsMap = {}, tempalteName) {
     for (let i = 0; i < ast.length; i++) {
         let node = ast[i];
         if (!node) continue;
@@ -28,16 +28,6 @@ function repalceWxmlParams (ast, replacePropsMap = {}, fileKey) {
                 if (k.startsWith(':style')) {
                     keepSemicolon = true
                 }
-                
-                for (const key in replacePropsMap) {
-                    if (replacePropsMap.hasOwnProperty(key) && (('v-'+key) === k || (':'+key) === k)) {
-                        const element = replacePropsMap[key];
-                        if (element != undefined) {
-                            oldValue = element;
-                            break;
-                        }
-                    }
-                }
                 let newValue = paramsHandle(oldValue, true, false, replacePropsMap,keepSemicolon);
                 node.attribs[k] = newValue;
             }
@@ -46,18 +36,7 @@ function repalceWxmlParams (ast, replacePropsMap = {}, fileKey) {
         if (node.type === 'text') {
             if (node.data) {
                 let text = node.data.replace(/{{(.*?)}}/g, function (match, $1) {
-                    // console.log($1);
-                    let oldValue = $1;
-                    for (const key in replacePropsMap) {
-                        if (replacePropsMap.hasOwnProperty(key) && key === $1) {
-                            const element = replacePropsMap[key];
-                            if (element != undefined) {
-                                oldValue = element;
-                                break;
-                            }
-                        }
-                    }
-                    let result = paramsHandle(oldValue, true, false, replacePropsMap);
+                    let result = paramsHandle($1, true, false, replacePropsMap);
                     return "{{" + result + "}}";
                 })
                 node.data = text;
@@ -65,7 +44,7 @@ function repalceWxmlParams (ast, replacePropsMap = {}, fileKey) {
         }
 
         if (node.children && node.children.length > 0) {
-            repalceWxmlParams(node.children, replacePropsMap, fileKey);
+            repalceWxmlParams(node.children, replacePropsMap, tempalteName);
         }
     }
 }
@@ -103,7 +82,7 @@ function replaceTagByTemplate (tagInfo, templateList, templateName, attr = "") {
                 attrsStr += " " + key + "=\"" + value + "\"";
             }
         }
-        
+            
         //开始替换
         repalceWxmlParams(ast, replacePropsMap, name);
         
