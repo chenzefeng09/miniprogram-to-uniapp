@@ -860,12 +860,14 @@ const templateConverter = async function (
                 if (k.startsWith('data-')){
                     collect_data_str+=(k.substr(5)+':\''+attrs[k]+"'")
                     collect_data_str+=','
+                    delete attrs[k]
                 }
                 if (k.startsWith(':data-')) {
                     collect_data_str+=(k.substr(6)+':'+attrs[k])
                     collect_data_str+=','
+                    delete attrs[k]
                 }
-                delete attrs[k]
+
             }
             collect_data_str = collect_data_str.substr(0,collect_data_str.length - 1)
             // console.log(collect_data_str)
