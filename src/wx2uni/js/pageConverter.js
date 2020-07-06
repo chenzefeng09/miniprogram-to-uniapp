@@ -12,6 +12,9 @@ let vistors = {};
 //外部定义的变量
 let declareNodeList = [];
 
+//data、生命周期方法的父级
+let jsBody = {}
+
 //data对象
 let dataValue = {};
 
@@ -234,6 +237,7 @@ const componentVistor = {
                 if (JSON.stringify(dataValue) == "{}") {
                     //第一个data，存储起来
                     dataValue = path.node.value;
+                    jsBody = path.parent
                 } else {
                     //这里是data里面的data同名属性
                     // console.log("add data", name);
@@ -277,7 +281,16 @@ const componentVistor = {
                         path.skip();
                 } else {
                     const node = path.node.value;
-                    if (
+                    if (t.isObjectProperty(path)
+                        && !t.isFunctionExpression(path.node.value)
+                        && !t.isArrowFunctionExpression(path.node.value)
+                        && !t.isCallExpression(path.node.value)
+                        && ('externalClasses' !== path.node.key.name)
+                        && jsBody === path.parent){
+                        //没有定义在data里的静态数据
+                        vistors.data.handle(path.node);
+                    }
+                    else if (
                         t.isFunctionExpression(node) ||
                         t.isArrowFunctionExpression(node) ||
                         t.isObjectExpression(node) ||

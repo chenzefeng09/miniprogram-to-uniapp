@@ -9,6 +9,9 @@ const pathUtil = require("../../utils/pathUtil");
 const babelUtil = require("../../utils/babelUtil");
 //
 
+//data、生命周期方法的父级
+let jsBody = {}
+
 let vistors = {};
 
 //外部定义的变量
@@ -27,6 +30,11 @@ let fileKey = "";
  *
  */
 const componentVistor = {
+    enter(path) {
+        if (path.node && path.node.body && path.node.body.length > 0 && path.node.body["0"].expression && path.node.body["0"].expression.arguments && path.node.body["0"].expression.arguments.length > 0){
+            jsBody = path.node.body["0"].expression.arguments["0"]
+        }
+    },
     IfStatement (path) {
         babelUtil.getAppFunHandle(path);
     },
@@ -467,7 +475,18 @@ function lifeCycleHandle (path) {
             path.skip();
             break;
         default:
-            vistors.lifeCycle.handle(path.node);
+            if (t.isObjectProperty(path)
+                && !t.isFunctionExpression(path.node.value)
+                && !t.isArrowFunctionExpression(path.node.value)
+                && !t.isCallExpression(path.node.value)
+                && ('externalClasses' !== path.node.key.name)
+                && jsBody === path.parent){
+                //没有定义在data里的静态数据
+                vistors.data.handle(path.node);
+            }
+            else {
+                vistors.lifeCycle.handle(path.node);
+            }
             path.skip();
             break;
     }
