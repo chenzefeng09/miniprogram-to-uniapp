@@ -6,7 +6,7 @@ const htmlparser = require('htmlparser2')   //html的AST类库
 //   Parser,
 //   DomHandler
 // } = require('stricter-htmlparser2')
-
+const selfCloseTags = ['input','img','image']
 class TemplateParser {
     constructor() {
     }
@@ -110,9 +110,14 @@ class TemplateParser {
                         }
                     });
                 }
+                if (item.name)
                 str += '>';
                 if (item.children && item.children.length) {
                     str += this.astToString(item.children);
+                }
+                else if (selfCloseTags.indexOf(item.name) != -1){
+                    //自闭合标签，不加后面的，防止一亩田的eslint报错
+                    return str
                 }
                 str += `</${item.name}>`;
             } else if (item.type == "comment") {
